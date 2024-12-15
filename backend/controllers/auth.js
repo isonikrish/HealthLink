@@ -74,3 +74,12 @@ export async function handleLogout(req, res) {
     res.status(500).json({ msg: "Internal Server Error" });
   }
 }
+export async function handleGetMe(req,res){
+ 
+  try {
+    const user = req.user;
+    return res.status(200).json(user);
+  } catch (error) {
+    return res.status(500).json({msg: "Internal Server Error"})
+  }
+}

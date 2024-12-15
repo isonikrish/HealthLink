@@ -29,6 +29,7 @@ function Signup({ setIsLogin }: AuthProps) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     await signup(formData)
+    
   };
 
   return (

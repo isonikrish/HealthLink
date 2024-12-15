@@ -3,7 +3,7 @@ import Login from "../components/Login"
 import Signup from "../components/Signup"
 
 function Authentication() {
-  const [isLogin, setIsLogin] = useState<boolean>(false)
+  const [isLogin, setIsLogin] = useState<boolean>(true)
 
   return (
     <div>

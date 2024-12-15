@@ -1,12 +1,22 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../store/useAuth";
-
+import { useNavigate } from "react-router-dom";
 interface AuthProps {
   setIsLogin: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 function Login({ setIsLogin }: AuthProps) {
-  const {login} = useAuth()
+  const {login, fetchMe, user} = useAuth()
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user?.role === "doctor") {
+      navigate(`/doctor/${user?._id}`)
+      
+    }else if(user?.role === "patient"){
+      navigate(`/patient/${user?._id}`)
+    }
+  }, [user, navigate]);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -23,6 +33,7 @@ function Login({ setIsLogin }: AuthProps) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     await login(formData);
+    fetchMe()
   };
   return (
     <div className="min-h-screen bg-base-200 flex">
