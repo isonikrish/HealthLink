@@ -23,17 +23,28 @@ export type appointment = {
   doctorId: string;
   description: string;
   date: string;
-  timeFrom: string;
-  timeTo: string;
+  timeFrom: Date | null;
+  timeTo: Date | null;
 };
+
 export type finalAppointment = {
   patientId: string,
   status: string,
   doctorId: doctor;
   description: string;
   date: string;
-  timeFrom: string;
-  timeTo: string;
+  timeFrom: Date;
+  timeTo: Date;
+}
+export type doctorsAppointment = {
+  patientId: Loggeduser,
+  status: string,
+  doctorId: doctor;
+  description: string;
+  date: string;
+  timeFrom: Date;
+  timeTo: Date;
+  _id: string
 }
 export type doctor = {
   fullName: string;

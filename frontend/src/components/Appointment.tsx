@@ -3,22 +3,55 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { FiCalendar } from "react-icons/fi";
 import { useAuth } from "../store/useAuth";
+import { formatTime } from "../store/formatTime";
+import axios from "axios";
+import toast from "react-hot-toast";
 
-function CreateAppointment() {
-  const { createAppointment, fetchDoctor, doctors } = useAuth();
-  const [searchQuery, setSearchQuery] = useState<string>(""); // Real-time input
-  const [debouncedQuery, setDebouncedQuery] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [showDropdown, setShowDropdown] = useState<boolean>(false);
+type AppointmentProps = {
+  patientId: number;
+  patientName: string;
+  appointmentId: string;
+  date: string;
+  timeFrom: Date;
+  timeTo: Date;
+  description: string;
+} & appointmentRefresh;
+
+type appointmentRefresh = {
+  selectedAppointment: AppointmentProps | null;
+};
+
+function Appointment({
+  patientId,
+  patientName,
+  appointmentId,
+  date,
+  timeFrom,
+  timeTo,
+  description,
+  selectedAppointment,
+}: AppointmentProps) {
   const [formData, setFormData] = useState({
-    doctorId: "",
-    description: "",
-    date: "",
-    timeFrom: null as Date | null,
-    timeTo: null as Date | null,
+    date: date,
+    timeFrom: timeFrom,
+    timeTo: timeTo,
+    patientId: patientId,
+    appointmentId: appointmentId,
   });
+  const {fetchDoctorAppointments} = useAuth();
+  useEffect(() => {
+    if (selectedAppointment) {
+      console.log("Selected Appointment:", selectedAppointment);
+      setFormData({
+        date: selectedAppointment.date,
+        timeFrom: new Date(selectedAppointment.timeFrom),
+        timeTo: new Date(selectedAppointment.timeTo),
+        patientId: selectedAppointment.patientId,
+        appointmentId: selectedAppointment._id, // Make sure this uses selectedAppointment._id
+      });
+    }
+  }, [selectedAppointment]);
 
-  // Handle form input changes
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -29,23 +62,6 @@ function CreateAppointment() {
     }));
   };
 
-  // Debounce the search query
-  useEffect(() => {
-    const handler = setTimeout(() => setDebouncedQuery(searchQuery), 500);
-    return () => clearTimeout(handler);
-  }, [searchQuery]);
-
-  // Fetch doctors based on debounced query
-  useEffect(() => {
-    if (debouncedQuery) {
-      fetchDoctor(debouncedQuery);
-      setShowDropdown(true);
-    } else {
-      setShowDropdown(false);
-    }
-  }, [debouncedQuery, fetchDoctor]);
-
-  // Handle time selection
   const handleTimeChange = (name: "timeFrom" | "timeTo", time: Date | null) => {
     setFormData((prevState) => ({
       ...prevState,
@@ -53,59 +69,45 @@ function CreateAppointment() {
     }));
   };
 
-  const handleDoctorSelect = (doctorId: string) => {
-    setFormData((prevState) => ({
-      ...prevState,
-      doctorId,
-    }));
-    setShowDropdown(false);
-  };
-
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    await createAppointment(formData); 
-    setIsLoading(false);
-  };
+    console.log("Form Data:", formData);
 
-
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
+    try {
+      const res = await axios.put(
+        "http://localhost:9294/api/appointment/reshedule-appointment",
+        formData,
+        {
+          withCredentials: true,
+        }
+      );
+      if (res.status === 200) {
+        toast.success("Re-scheduled the Appointment");
+        fetchDoctorAppointments()
+      }
+    } catch (error: any) {
+      toast.error(error?.message || "Error occurred while rescheduling");
+    }
   };
 
   return (
     <div className="p-10 w-full">
       <div className="card w-full shadow-xl rounded-lg">
         <h2 className="card-title text-center text-2xl font-semibold mb-6 text-white">
-          Create a New Appointment
+          View Appointment
         </h2>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="relative">
             <div className="input input-bordered flex items-center gap-2">
               <input
                 type="text"
                 className="grow"
                 placeholder="Search Doctor"
-                onChange={handleSearch}
+                value={patientName}
+                disabled
               />
             </div>
-            {showDropdown && (
-              <ul className="absolute bg-black border rounded-lg w-full mt-1 shadow-lg max-h-60 overflow-y-auto z-10">
-                {doctors?.map((doctor) => (
-                  <li
-                    key={doctor?._id}
-                    className={`px-4 py-2 cursor-pointer hover:bg-blue-100 hover:text-black ${
-                      formData.doctorId === doctor?._id ? "bg-blue-200" : ""
-                    }`}
-                    onClick={() => handleDoctorSelect(doctor?._id)}
-                  >
-                    {doctor?.fullName} - {doctor?.email}
-                  </li>
-                ))}
-              </ul>
-            )}
           </div>
 
           <div className="relative">
@@ -113,12 +115,11 @@ function CreateAppointment() {
               className="textarea textarea-bordered w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
               placeholder="Appointment Description"
               name="description"
-              value={formData.description}
-              onChange={handleChange}
+              value={description}
+              disabled
             />
           </div>
 
-          {/* Appointment Date */}
           <div className="relative">
             <FiCalendar className="absolute left-3 top-4 text-gray-400" />
             <input
@@ -130,13 +131,12 @@ function CreateAppointment() {
             />
           </div>
 
-          {/* Time Selection */}
           <div className="flex justify-between gap-4">
             <div className="flex flex-col">
               <label className="text-gray-500 mb-1">From</label>
               <DatePicker
                 selected={formData.timeFrom}
-                onChange={(time: Date | null) => handleTimeChange("timeFrom", time)}
+                onChange={(time) => handleTimeChange("timeFrom", time)}
                 showTimeSelect
                 timeIntervals={15}
                 timeCaption="Time"
@@ -149,7 +149,7 @@ function CreateAppointment() {
               <label className="text-gray-500 mb-1">To</label>
               <DatePicker
                 selected={formData.timeTo}
-                onChange={(time: Date | null) => handleTimeChange("timeTo", time)}
+                onChange={(time) => handleTimeChange("timeTo", time)}
                 showTimeSelect
                 timeIntervals={15}
                 timeCaption="Time"
@@ -160,18 +160,11 @@ function CreateAppointment() {
             </div>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
-            className="btn btn-primary w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200"
+            className="btn btn-primary w-full bg-green-500 hover:bg-green-600 border-none text-white font-bold py-2 px-4 rounded-lg"
           >
-            {isLoading ? (
-              <>
-                <span className="loading loading-spinner"></span> Loading...
-              </>
-            ) : (
-              "Create Appointment"
-            )}
+            Schedule
           </button>
         </form>
       </div>
@@ -179,4 +172,4 @@ function CreateAppointment() {
   );
 }
 
-export default CreateAppointment;
+export default Appointment;

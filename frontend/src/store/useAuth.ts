@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { loginUser, User, Loggeduser, appointment, doctor, finalAppointment } from "./types.ts";
+import { loginUser, User, Loggeduser, appointment, doctor, finalAppointment, doctorsAppointment } from "./types.ts";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -15,15 +15,18 @@ interface AuthState {
   fetchDoctor: (query: string) => void;
   doctors: doctor[] | null
   appointments: finalAppointment[] | null
+  doctorAppointments: doctorsAppointment[] |null
   fetchAppointments: ()=>void;
+  fetchDoctorAppointments: ()=>void;
 }
 
-export const useAuth = create<AuthState>((set) => ({
+export const useAuth = create<AuthState>((set,get) => ({
   user: null,
   isSigningUp: false,
   isLogging: false,
   doctors: null,
   appointments: null,
+  doctorAppointments: null,
   signup: async (data: User) => {
     set({ isSigningUp: true });
     try {
@@ -60,20 +63,6 @@ export const useAuth = create<AuthState>((set) => ({
       set({ isLogging: false });
     }
   },
-  logout: async () => {
-    try {
-      const res = await axios.post(
-        "http://localhost:9294/api/user/logout",
-        {},
-        {
-          withCredentials: true,
-        }
-      );
-      toast.success("Logged Out");
-    } catch (error: any) {
-      toast.error(error.response?.data?.msg || "An error occurred");
-    }
-  },
   fetchMe: async () => {
     try {
       const res = await axios.get("http://localhost:9294/api/user/me", {
@@ -84,6 +73,25 @@ export const useAuth = create<AuthState>((set) => ({
       console.log(error);
     }
   },
+  logout: async () => {
+    try {
+      const res = await axios.post(
+        "http://localhost:9294/api/user/logout",
+        {},
+        {
+          withCredentials: true,
+        }
+      );
+      if(res.status === 200){
+        toast.success("Logged Out Successfully");
+        set({ user: null });
+      }
+      
+    } catch (error: any) {
+      toast.error(error.response?.data?.msg || "An error occurred");
+    }
+  },
+  
   createAppointment: async (data) => {
     try {
       const res = await axios.post(
@@ -118,6 +126,17 @@ export const useAuth = create<AuthState>((set) => ({
         withCredentials: true,
       });
       set({ appointments: res.data });
+    } catch (error) {
+      console.log(error);
+    }
+  },
+  fetchDoctorAppointments: async() =>{
+    
+     try {
+      const res = await axios.get("http://localhost:9294/api/appointment/my-appointments", {
+        withCredentials: true,
+      });
+      set({ doctorAppointments: res.data });
     } catch (error) {
       console.log(error);
     }
